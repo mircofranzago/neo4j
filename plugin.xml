@@ -62,6 +62,14 @@
             targetClass="eu.udig.catalog.neo4j.Neo4jSpatialGeoResource">
          <enablement></enablement>
       </operation>
+      <operation
+            class="eu.udig.catalog.neo4j.ConfigureDynamicLayers"
+            enablesFor="1"
+            id="eu.udig.catalog.neo4j.configureDynamicLayers"
+            name="Configure Dynamic Layers"
+            targetClass="eu.udig.catalog.neo4j.Neo4jSpatialGeoResource">
+         <enablement></enablement>
+      </operation>
    </extension>
    <extension
          point="net.refractions.udig.mapgraphic.mapgraphic">

@@ -165,7 +165,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 
 	private void ensureDefaultDatabasesLoaded() {
 		HashSet<File> dbDirs = new HashSet<File>();
-		for (String path : new String[] { ".", System.getenv("HOME") }) {
+		/*for (String path : new String[] { ".", System.getenv("HOME") }) {
 			try {
 				File dir = new File(path);
 				if (dir.exists() && dir.isDirectory()) {
@@ -177,10 +177,11 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 				System.err.println("Failed to perform search at '" + path + "': " + e);
 				e.printStackTrace();
 			}
-		}
-		for (File dir : dbDirs) {
-			ensureCatalogHasDatabaseDir(dir);
-		}
+		}*/
+		ensureCatalogHasDatabaseDir(new File("c:\\neo"));
+//		for (File dir : dbDirs) {
+//			ensureCatalogHasDatabaseDir(dir);
+//		}
 	}
 	
 	private void ensureCatalogHasDatabaseDir(File dir) {
