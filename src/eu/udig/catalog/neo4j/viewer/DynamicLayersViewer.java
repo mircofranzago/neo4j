@@ -1,5 +1,6 @@
 package eu.udig.catalog.neo4j.viewer;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -32,8 +33,8 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 
 	List list;
 	Layer targetLayer; 
-	java.util.List<Layer> layers;
-	//ConfigureDynamicLayers configureDynamicLayers;
+	java.util.List<LayerConfig> layers;
+	ConfigureDynamicLayers configureDynamicLayers;
 	boolean isConfigLayer;
 
 	Button addButtonOSM;
@@ -44,13 +45,10 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 
 	public DynamicLayersViewer(Shell parentShell, ConfigureDynamicLayers configureDynamicLayers, Layer targetLayer) {
 		super(parentShell);
-		//this.configureDynamicLayers = configureDynamicLayers;
+		this.configureDynamicLayers = configureDynamicLayers;
 		this.targetLayer = targetLayer;
 		this.isConfigLayer = targetLayer instanceof LayerConfig;
-		if (isConfigLayer)  
-			this.layers = ((DynamicLayer)((LayerConfig)targetLayer).getParent()).getLayers();
-		else 
-			this.layers = ((DynamicLayer)targetLayer).getLayers();
+		this.layers = getLayerConfig(isConfigLayer);
 	}
 
 	public void create() {
@@ -163,8 +161,8 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 				// Remove all these entries
 				if (MessageDialog.openConfirm(getShell(), "Remove item", "Do you really want to remove selected item(s)?")) {
 					for(int i = 0; i< selectedItems.length; i++) {
-						String layerToBeRemoveName = layers.get(selectedItems[i]).getName();
-						removeLayerConfig(layerToBeRemoveName);
+						LayerConfig layerToBeRemove = layers.get(selectedItems[i]);
+						removeLayerConfig(layerToBeRemove);
 					}
 					// Now re-validate the list because it has changed
 					validate();
@@ -193,10 +191,11 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		//pre-selection of the LayerConfig
 		if (isConfigLayer && layers.size() > 0) {
 			int cont = 0;
-			Iterator<Layer> iterator = layers.iterator();
+			Iterator<LayerConfig> iterator = layers.iterator();
 			while (iterator.hasNext())  {
 				if (iterator.next().getName().equals(targetLayer.getName())) {
 					list.select(cont);
+					return;
 				}
 				else 
 					cont++;
@@ -204,14 +203,27 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		}
 	}
 
-	private void removeLayerConfig (String layerToBeRemoveName) {
-		if (isConfigLayer) {
-			//TODO why in DynamicLayer the remove method is protected???
-			((OSMLayer)((LayerConfig)targetLayer).getParent()).removeDynamicLayer(layerToBeRemoveName);
-		}
+	private void removeLayerConfig (LayerConfig layerToBeRemove) {
+		String layerToBeRemoveName = layerToBeRemove.getName();
+		if (((DynamicLayer)(layerToBeRemove	.getParent()))	.removeLayerConfig(layerToBeRemoveName))
+			list.remove(layerToBeRemoveName);
+	}
+	
+	private java.util.List<LayerConfig> getLayerConfig (boolean isLayerConfig) {
+		java.util.List<Layer> tempList;
+		java.util.List<LayerConfig> layerConfigList = new ArrayList<LayerConfig>();
+		if (isConfigLayer)  
+			tempList = ((DynamicLayer)((LayerConfig)targetLayer).getParent()).getLayers();
 		else 
-			((OSMLayer)targetLayer).removeDynamicLayer(layerToBeRemoveName);
-		list.remove(layerToBeRemoveName);
+			tempList = ((DynamicLayer)targetLayer).getLayers();
+		
+		for (int i = 0; i<tempList.size(); i++) {
+			if (tempList.get(i) instanceof LayerConfig) {
+				layerConfigList.add((LayerConfig)tempList.get(i));
+			}
+		}
+		
+		return layerConfigList;
 	}
 
 	private void validate() {
