@@ -63,9 +63,9 @@
          <enablement></enablement>
       </operation>
       <operation
-            class="eu.udig.catalog.neo4j.ConfigureDynamicLayers"
+            class="eu.udig.catalog.neo4j.dynamiclayerconf.ConfigureDynamicLayers"
             enablesFor="1"
-            id="eu.udig.catalog.neo4j.configureDynamicLayers"
+            id="eu.udig.catalog.neo4j.dynamiclayerconf.configureDynamicLayers"
             name="Configure Dynamic Layers"
             targetClass="eu.udig.catalog.neo4j.Neo4jSpatialGeoResource">
          <enablement></enablement>
