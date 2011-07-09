@@ -16,7 +16,7 @@ import org.eclipse.swt.widgets.Text;
  * 
  * @author Mirco Franzago for GSoC 2011
  */
-class TextEditorDialog extends TitleAreaDialog {
+class OSMEditingDialog extends TitleAreaDialog {
 
 	Text queryText;
 	Text nameText;
@@ -26,11 +26,11 @@ class TextEditorDialog extends TitleAreaDialog {
 	String query= "";
 	int type = 0;
 
-	public TextEditorDialog(Shell parentShell) {
+	public OSMEditingDialog(Shell parentShell) {
 		super(parentShell);
 	} 
 
-	public TextEditorDialog(Shell parentShell, String name, int type, String query) {
+	public OSMEditingDialog(Shell parentShell, String name, int type, String query) {
 		super(parentShell);
 		this.name = name;
 		this.type = type;

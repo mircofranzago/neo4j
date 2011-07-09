@@ -1,10 +1,13 @@
 package eu.udig.catalog.neo4j.dynamiclayerconf;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -24,7 +27,6 @@ import org.neo4j.gis.spatial.Layer;
 import org.neo4j.gis.spatial.osm.OSMLayer;
 import org.neo4j.gis.spatial.DynamicLayer.LayerConfig;
 
-
 /**
  * GUI for dynamic layers configuration
  * 
@@ -34,9 +36,8 @@ import org.neo4j.gis.spatial.DynamicLayer.LayerConfig;
 public class DynamicLayersViewer extends TitleAreaDialog {
 
 	List list;
-	Layer targetLayer; 
-	java.util.List<LayerConfig> layers;
-	//	ConfigureDynamicLayers configureDynamicLayers;
+	Layer targetLayer;
+	// ConfigureDynamicLayers configureDynamicLayers;
 	boolean isConfigLayer;
 	boolean isOSMLayer;
 
@@ -46,13 +47,13 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	Button removeButton;
 	Button exitButton;
 
-	public DynamicLayersViewer(Shell parentShell, ConfigureDynamicLayers configureDynamicLayers, Layer targetLayer) {
+	public DynamicLayersViewer(Shell parentShell,
+			ConfigureDynamicLayers configureDynamicLayers, Layer targetLayer) {
 		super(parentShell);
-		//		this.configureDynamicLayers = configureDynamicLayers;
+		// this.configureDynamicLayers = configureDynamicLayers;
 		this.targetLayer = targetLayer;
 		this.isConfigLayer = targetLayer instanceof LayerConfig;
 		this.isOSMLayer = targetLayer instanceof OSMLayer;
-		this.layers = getLayerConfig(isConfigLayer);
 	}
 
 	public void create() {
@@ -79,7 +80,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		// We add a SelectionListener
 		list.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				//When the selection changes, we re-validate the list
+				// When the selection changes, we re-validate the list
 				validate();
 			}
 		});
@@ -92,7 +93,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	}
 
 	protected void createButtonsForButtonBar(Composite parent) {
-		//in this case we want to leave this empty
+		// in this case we want to leave this empty
 	}
 
 	protected void addButtons(Composite parent) {
@@ -106,37 +107,34 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		addButtonOSM = new Button(composite, SWT.PUSH);
 		addButtonOSM.setText("Add OSM tags filter");
 
-		// Initially deactivate it
 		addButtonOSM.setEnabled(true);
 		// Add a SelectionListener
 		addButtonOSM.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				// Retrieve selected entries from list
-				//		        itemsToOpen = list.getSelection();
-				//		        // Set return code
-				//		        setReturnCode(OPEN);
-				//		        // Close dialog
-				//		        close();
+				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(
+						getShell(), false);
+				if (textEditorDialog.open() == Window.OK) {
+					addOSMLayerConfig(textEditorDialog);
+					// Now re-validate the list because it has changed
+					validate();
+				}
 			}
 		});
 
 		// Create Add CQL button
 		addButtonCQL = new Button(composite, SWT.PUSH);
 		addButtonCQL.setText("Add CQL");
-		// Initially deactivate it
 		addButtonCQL.setEnabled(true);
 		// Add a SelectionListener
 		addButtonCQL.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				TextEditorDialog textEditorDialog = new TextEditorDialog(getShell(), "pippo", 4, "vaffanculo");
-				textEditorDialog.open();
-//				System.out.println(textEditorDialog.getQuery());
-				// Retrieve selected entries from list
-				//		        itemsToOpen = list.getSelection();
-				//		        // Set return code
-				//		        setReturnCode(OPEN);
-				//		        // Close dialog
-				//		        close();
+				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(
+						getShell(), true);
+				if (textEditorDialog.open() == Window.OK) {
+					addCQLLayerConfig(textEditorDialog);
+					// Now re-validate the list because it has changed
+					validate();
+				}
 			}
 		});
 
@@ -147,12 +145,11 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		// Add a SelectionListener
 		editButton.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				// Get the indices of the selected entries
-				//		        int selectedItems[] = list.getSelectionIndices();
-				//		        // Remove all these entries
-				//		        list.remove(selectedItems);
-				//		        // Now re-validate the list because it has changed
-				//		        validate();
+				// Get the indice of the selected entries
+				String selectedItems = list.getSelection()[0];
+
+				// // Now re-validate the list because it has changed
+				// validate();
 			}
 		});
 
@@ -164,11 +161,13 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		removeButton.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
 				// Get the indices of the selected entries
-				int selectedItems[] = list.getSelectionIndices();
+				String[] selectedItems = list.getSelection();
 				// Remove all these entries
-				if (MessageDialog.openConfirm(getShell(), "Remove item", "Do you really want to remove selected item(s)?")) {
-					for(int i = 0; i< selectedItems.length; i++) {
-						LayerConfig layerToBeRemove = layers.get(selectedItems[i]);
+				if (MessageDialog.openConfirm(getShell(), "Remove item",
+				"Do you really want to remove selected item(s)?")) {
+					for (int i = 0; i < selectedItems.length; i++) {
+						LayerConfig layerToBeRemove = getLayerConfig().get(
+								selectedItems[i]);
 						removeLayerConfig(layerToBeRemove);
 					}
 					// Now re-validate the list because it has changed
@@ -189,45 +188,78 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		});
 	}
 
-	//fill in the viewer the dynamic layers list
-	private void fillLayersList () {
-		for (int i = 0; i < layers.size(); i++) {
-			list.add(layers.get(i).getName());
+	// fill in the viewer the dynamic layers list
+	private void fillLayersList() {
+		HashMap<String, LayerConfig> layers = getLayerConfig();
+		Iterator<LayerConfig> itr = layers.values().iterator();
+		while (itr.hasNext()) {
+			list.add(itr.next().getName());
 		}
 
-		//pre-selection of the LayerConfig
+		// pre-selection of the LayerConfig
 		if (isConfigLayer && layers.size() > 0) {
-			int cont = 0;
-			Iterator<LayerConfig> iterator = layers.iterator();
-			while (iterator.hasNext())  {
-				if (iterator.next().getName().equals(targetLayer.getName())) {
-					list.select(cont);
-					return;
-				}
-				else 
-					cont++;
-			}
+			list.setSelection(new String[] { targetLayer.getName() });
 		}
 	}
 
-	private void removeLayerConfig (LayerConfig layerToBeRemove) {
+	private void removeLayerConfig(LayerConfig layerToBeRemove) {
 		String layerToBeRemoveName = layerToBeRemove.getName();
-		if (((DynamicLayer)(layerToBeRemove	.getParent()))	.removeLayerConfig(layerToBeRemoveName))
+		if (((DynamicLayer) (layerToBeRemove.getParent()))
+				.removeLayerConfig(layerToBeRemoveName))
 			list.remove(layerToBeRemoveName);
 	}
 
-	private java.util.List<LayerConfig> getLayerConfig (boolean isLayerConfig) {
-		java.util.List<Layer> tempList;
-		java.util.List<LayerConfig> layerConfigList = new ArrayList<LayerConfig>();
-		//if the selected layer is a LayerConfig, we take the  LayerConfigs of the parent
-		if (isConfigLayer)  
-			tempList = ((DynamicLayer)((LayerConfig)targetLayer).getParent()).getLayers();
-		else 
-			tempList = ((DynamicLayer)targetLayer).getLayers();
+	// add a simple dynamic layer to a OSMLayer
+	private void addOSMLayerConfig(LayerConfigEditingDialog dialog) {
+		LayerConfig newLayerConfig = null;
+		if (isConfigLayer) {
+			newLayerConfig = ((OSMLayer) (((LayerConfig) targetLayer)
+					.getParent())).addSimpleDynamicLayer(dialog.getType(),
+							dialog.getQuery());
+		} else {
+			newLayerConfig = ((OSMLayer) targetLayer).addSimpleDynamicLayer(
+					dialog.getType(), dialog.getQuery());
+		}
 
-		for (int i = 0; i<tempList.size(); i++) {
+		if (newLayerConfig != null) {
+			list.add(newLayerConfig.getName());
+		}
+	}
+
+	// add a CQL-based LayerConfig to a Dynamic Layer
+	private void addCQLLayerConfig(LayerConfigEditingDialog dialog) {
+		LayerConfig newLayerConfig = null;
+		if (isConfigLayer) {
+			newLayerConfig = ((DynamicLayer) (((LayerConfig) targetLayer)
+					.getParent())).addLayerConfig(dialog.getName(),
+							dialog.getType(), dialog.getQuery());
+		} else {
+			newLayerConfig = ((DynamicLayer) targetLayer).addLayerConfig(
+					dialog.getName(), dialog.getType(), dialog.getQuery());
+		}
+
+		if (newLayerConfig != null) {
+			list.add(newLayerConfig.getName());
+		}
+	}
+
+	// to get the LayerConfigs of the targetLayer
+	private HashMap<String, LayerConfig> getLayerConfig() {
+		java.util.List<Layer> tempList;
+		HashMap<String, LayerConfig> layerConfigList = new HashMap<String, LayerConfig>();
+		// if the selected layer is a LayerConfig, we take the LayerConfigs of
+		// the parent
+		if (isConfigLayer)
+			tempList = ((DynamicLayer) ((LayerConfig) targetLayer).getParent())
+			.getLayers();
+		else
+			tempList = ((DynamicLayer) targetLayer).getLayers();
+
+		// we want to take only the LayerConfigs
+		for (int i = 0; i < tempList.size(); i++) {
 			if (tempList.get(i) instanceof LayerConfig) {
-				layerConfigList.add((LayerConfig)tempList.get(i));
+				layerConfigList.put(((LayerConfig) tempList.get(i)).getName(),
+						(LayerConfig) tempList.get(i));
 			}
 		}
 
@@ -236,7 +268,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 
 	private void validate() {
 		// We select the number of selected list entries
-		boolean selected = (list.getSelectionCount()  > 0);
+		boolean selected = (list.getSelectionCount() > 0);
 
 		editButton.setEnabled(selected);
 		removeButton.setEnabled(selected);
