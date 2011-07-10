@@ -18,15 +18,15 @@ import org.eclipse.swt.widgets.Text;
  */
 class LayerConfigEditingDialog extends TitleAreaDialog {
 
-	Text queryText;
-	Text nameText;
-	Combo typeCombo;
+	private Text queryText;
+	private Text nameText;
+	private Combo typeCombo;
 
-	boolean cql;
+	private boolean cql;
 	
-	String name = "";
-	String query= "";
-	int type = 0;
+	private String name = "";
+	private String query= "";
+	private int type = 0;
 
 	public LayerConfigEditingDialog(Shell parentShell, boolean cql) {
 		super(parentShell);
@@ -89,6 +89,10 @@ class LayerConfigEditingDialog extends TitleAreaDialog {
 
 	public String getName() {
 		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public String getQuery() {

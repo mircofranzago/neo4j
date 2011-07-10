@@ -1,7 +1,5 @@
 package eu.udig.catalog.neo4j.dynamiclayerconf;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -15,17 +13,15 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
 import org.neo4j.gis.spatial.DynamicLayer;
+import org.neo4j.gis.spatial.DynamicLayer.LayerConfig;
 import org.neo4j.gis.spatial.Layer;
 import org.neo4j.gis.spatial.osm.OSMLayer;
-import org.neo4j.gis.spatial.DynamicLayer.LayerConfig;
 
 /**
  * GUI for dynamic layers configuration
@@ -37,7 +33,6 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 
 	List list;
 	Layer targetLayer;
-	// ConfigureDynamicLayers configureDynamicLayers;
 	boolean isConfigLayer;
 	boolean isOSMLayer;
 
@@ -50,7 +45,6 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	public DynamicLayersViewer(Shell parentShell,
 			ConfigureDynamicLayers configureDynamicLayers, Layer targetLayer) {
 		super(parentShell);
-		// this.configureDynamicLayers = configureDynamicLayers;
 		this.targetLayer = targetLayer;
 		this.isConfigLayer = targetLayer instanceof LayerConfig;
 		this.isOSMLayer = targetLayer instanceof OSMLayer;
@@ -74,14 +68,14 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		gridLayout.marginWidth = 15;
 		gridLayout.marginHeight = 10;
 		area.setLayout(gridLayout);
-		
+
 		Composite listArea =new Composite(area, SWT.NULL);
 		GridLayout gridLayout2 = new GridLayout(1, false);
 		listArea.setLayout(gridLayout2);
-		
+
 		Label label = new Label(listArea, SWT.NULL);
 		label.setText("Dynamic Layers list:");
-		
+
 		// Now we create the list widget
 		list = new List(listArea, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL);
 		final GridData gridData = new GridData();
@@ -129,7 +123,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 				}
 			}
 		});
-		
+
 		// Create Add OSM tags filter button
 		addButtonOSM = new Button(composite, SWT.PUSH);
 		addButtonOSM.setText("Add OSM tags filter");
@@ -152,7 +146,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 				addButtonOSM.setEnabled(true);
 		} else if (isOSMLayer)
 			addButtonOSM.setEnabled(true);
-		
+
 		// Create Delete button
 		editButton = new Button(composite, SWT.PUSH);
 		editButton.setText("Edit");
@@ -160,12 +154,15 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		// Add a SelectionListener
 		editButton.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				// Get the indice of the selected entries
 				String selectedItem = list.getSelection()[0];
 				LayerConfigEditingDialog textEditorDialog = createLayerConfigEditingDialog(selectedItem);
 				if (textEditorDialog.open() == Window.OK) {
 					LayerConfig conf = getLayerConfig().get(selectedItem);
-					if ( addCQLLayerConfig(textEditorDialog))
+					//we have to rename the edited layer to avoid name conflict
+					if (conf.getName().equals(textEditorDialog.getName()))
+						textEditorDialog.setName(conf.getName()+"_new");
+
+					if (addCQLLayerConfig(textEditorDialog))
 						removeLayerConfig(conf);
 					// Now re-validate the list because it has changed
 					validate();
@@ -229,38 +226,47 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	}
 
 	// add a simple dynamic layer to a OSMLayer
-	private void addOSMLayerConfig(LayerConfigEditingDialog dialog) {
+	private boolean addOSMLayerConfig(LayerConfigEditingDialog dialog) {
 		LayerConfig newLayerConfig = null;
-		if (isConfigLayer) {
-			newLayerConfig = ((OSMLayer) (((LayerConfig) targetLayer)
-					.getParent())).addSimpleDynamicLayer(dialog.getName(), dialog.getType(),	dialog.getQuery());
-		} else {
-			newLayerConfig = ((OSMLayer) targetLayer).addSimpleDynamicLayer(dialog.getName(),	dialog.getType(), dialog.getQuery());
+		try{
+			if (isConfigLayer) {
+				newLayerConfig = ((OSMLayer) (((LayerConfig) targetLayer)
+						.getParent())).addSimpleDynamicLayer(dialog.getName(), dialog.getType(),	dialog.getQuery());
+			} else {
+				newLayerConfig = ((OSMLayer) targetLayer).addSimpleDynamicLayer(dialog.getName(),	dialog.getType(), dialog.getQuery());
+			}
+		}
+		catch (Exception e) {
+			MessageDialog.openError(getShell(), "New Dynamic Layer", e.getMessage());
+			return false;
 		}
 
-		if (newLayerConfig != null) {
-			list.add(newLayerConfig.getName());
-		}
+		return checkNewLayerConfig (newLayerConfig);
 	}
 
 	// add a CQL-based LayerConfig to a Dynamic Layer
 	private boolean addCQLLayerConfig(LayerConfigEditingDialog dialog) {
 		LayerConfig newLayerConfig = null;
 		try{
-		if (isConfigLayer) {
-			newLayerConfig = ((DynamicLayer) (((LayerConfig) targetLayer)
-					.getParent())).addLayerConfig(dialog.getName(),
-							dialog.getType(), dialog.getQuery());
-		} else {
-			newLayerConfig = ((DynamicLayer) targetLayer).addLayerConfig(
-					dialog.getName(), dialog.getType(), dialog.getQuery());
-		}
+			if (isConfigLayer) {
+				newLayerConfig = ((DynamicLayer) (((LayerConfig) targetLayer)
+						.getParent())).addLayerConfig(dialog.getName(),
+								dialog.getType(), dialog.getQuery());
+			} else {
+				newLayerConfig = ((DynamicLayer) targetLayer).addLayerConfig(
+						dialog.getName(), dialog.getType(), dialog.getQuery());
+			}
 		}
 		catch (Exception e) {
 			MessageDialog.openError(getShell(), "New Dynamic Layer", e.getMessage());
 			return false;
 		}
-		
+
+		return checkNewLayerConfig (newLayerConfig);
+	}
+
+	//check if the new LayerConfig creation was ok
+	private boolean checkNewLayerConfig (LayerConfig newLayerConfig) {
 		if (newLayerConfig != null) {
 			//check the non-existence of the new layer
 			String[]items = list.getItems();
@@ -280,6 +286,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		}
 	}
 
+	//fill the input in the dialog before the editing of an existing LayerConfig
 	private LayerConfigEditingDialog createLayerConfigEditingDialog(String layerConfigToBeEditName) {
 		LayerConfigEditingDialog textEditorDialog;
 		LayerConfig layerConfigToBeEdit = getLayerConfig().get(layerConfigToBeEditName);
@@ -313,6 +320,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		return layerConfigList;
 	}
 
+	//validate the dialog buttons to check the enabled ones
 	private void validate() {
 		// We select the number of selected list entries
 		boolean selected = (list.getSelectionCount() > 0);

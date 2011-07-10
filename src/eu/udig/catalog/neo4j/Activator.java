@@ -1,6 +1,6 @@
 /**
- * 
- */
+*
+*/
 package eu.udig.catalog.neo4j;
 
 import java.io.File;
@@ -32,17 +32,17 @@ import org.osgi.framework.BundleContext;
 
 
 /**
- * Neo4j Plugin Activator. 
- * It maintains an index of open Neo4j DataStores. 
- * 
- * @author Davide Savazzi
- */
+* Neo4j Plugin Activator.
+* It maintains an index of open Neo4j DataStores.
+*
+* @author Davide Savazzi
+*/
 public class Activator extends AbstractUIPlugin implements IStartup {
 
-	// Constructor
-	    
+// Constructor
 
-	public Activator() {
+
+public Activator() {
         super();
         
         openDataStores = new HashMap<String,Neo4jSpatialDataStore>();
@@ -53,102 +53,102 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 
     // Public methods
     
-	/**
-	 * Return a Neo4j DataStore.
-	 */
-	public Neo4jSpatialDataStore getDataStore(Map<String, Serializable> params) throws IOException {
-		if (dataStorefactory.canProcess(params)) {
-			String id = dataStorefactory.getDataStoreUniqueIdentifier(params);
-			synchronized (openDataStores) {
-				Neo4jSpatialDataStore dataStore = openDataStores.get(id);
-				if (dataStore == null) {
-	    			dataStore = (Neo4jSpatialDataStore) dataStorefactory.createDataStore(params);					
-	    			openDataStores.put(id, dataStore);
-	    			
-	        		log("Opened Neo4j Database: " + id);
-				}
-				ensureCatalogHasDatabaseDir(new File(id));
-				return dataStore;
-    		}
-		} else {
-			// invalid parameters
-			return null;
-		}
-	}
-	
-	/**
-	 * Close all open DataStores.
-	 */
+/**
+* Return a Neo4j DataStore.
+*/
+public Neo4jSpatialDataStore getDataStore(Map<String, Serializable> params) throws IOException {
+if (dataStorefactory.canProcess(params)) {
+String id = dataStorefactory.getDataStoreUniqueIdentifier(params);
+synchronized (openDataStores) {
+Neo4jSpatialDataStore dataStore = openDataStores.get(id);
+if (dataStore == null) {
+dataStore = (Neo4jSpatialDataStore) dataStorefactory.createDataStore(params);
+openDataStores.put(id, dataStore);
+
+log("Opened Neo4j Database: " + id);
+}
+ensureCatalogHasDatabaseDir(new File(id));
+return dataStore;
+     }
+} else {
+// invalid parameters
+return null;
+}
+}
+
+/**
+* Close all open DataStores.
+*/
     public void stop(BundleContext context) throws Exception {
         plugin = null;
         
         synchronized (openDataStores) {
-        	for (String id : openDataStores.keySet()) {
-        		DataStore dataStore = openDataStores.get(id);
-        		dataStore.dispose();
-        	}
-        	openDataStores.clear();
-		}
+         for (String id : openDataStores.keySet()) {
+         DataStore dataStore = openDataStores.get(id);
+         dataStore.dispose();
+         }
+         openDataStores.clear();
+}
         
         super.stop(context);
     }
 
     public Neo4jSpatialService getLayerService(ILayer layer, IProgressMonitor monitor) {
-		try {
-			IService service = layer.getGeoResource().service(monitor);
-			if (service instanceof Neo4jSpatialService) {
-				return (Neo4jSpatialService) service;
-			}			
-		} catch (IOException e) {
-			log(e.getMessage(), e);
-		}
+try {
+IService service = layer.getGeoResource().service(monitor);
+if (service instanceof Neo4jSpatialService) {
+return (Neo4jSpatialService) service;
+}
+} catch (IOException e) {
+log(e.getMessage(), e);
+}
 
-		return null;
+return null;
     }
     
     public ILayer findLayer(String layerName, List<ILayer> layers) {
-		for (ILayer layer : layers) {
-			if (layer.getName().equals(layerName)) {
-				return layer;
-			}
-		}
-		return null;
+for (ILayer layer : layers) {
+if (layer.getName().equals(layerName)) {
+return layer;
+}
+}
+return null;
     }
     
     /**
-     * Return a static reference to this Activator
-     */
+* Return a static reference to this Activator
+*/
     public static Activator getDefault() {
         return plugin;
     }
 
     /**
-     * Open an Error Message Dialog
-     */
+* Open an Error Message Dialog
+*/
     public static void openError(final Display display, final String title, final String message) {
-		display.asyncExec(new Runnable() {
-			public void run() {
-				MessageDialog.openError(
-						display.getActiveShell(),
-						title,
-						message);
-			}});    	
+display.asyncExec(new Runnable() {
+public void run() {
+MessageDialog.openError(
+display.getActiveShell(),
+title,
+message);
+}});
     }
     
     public static void log(String message) {
-    	System.out.println(message);
+     System.out.println(message);
         // TODO getDefault().getLog().log(new Status(IStatus.INFO, ID, message));
-    }        
+    }
     
     public static void log(String message, Throwable t) {
-    	t.printStackTrace();
-    	System.out.println(message);
+     t.printStackTrace();
+     System.out.println(message);
         // int status = t instanceof Exception || message != null ? IStatus.ERROR : IStatus.WARNING;
         // TODO getDefault().getLog().log(new Status(status, ID, IStatus.OK, message, t));
-    }    
-	
+    }
+
     
-	// Attributes
+// Attributes
 
     private Map<String,Neo4jSpatialDataStore> openDataStores;
     private Neo4jSpatialDataStoreFactory dataStorefactory = new Neo4jSpatialDataStoreFactory();
@@ -156,73 +156,72 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 
     public final static String ID = "net.refractions.udig.catalog.neo4j";
 
-	@Override
+@Override
     public void earlyStartup() {
-		if (this.openDataStores.size() == 0) {
-			ensureDefaultDatabasesLoaded();
-		}
+if (this.openDataStores.size() == 0) {
+ensureDefaultDatabasesLoaded();
+}
     }
 
-	private void ensureDefaultDatabasesLoaded() {
-		HashSet<File> dbDirs = new HashSet<File>();
-		/*for (String path : new String[] { ".", System.getenv("HOME") }) {
-			try {
-				File dir = new File(path);
-				if (dir.exists() && dir.isDirectory()) {
-					for (String subdir : new String[] { "dev/neo4j", "neo4j", "workspace" }) {
-						findDbDirs(dbDirs, new File(dir.getCanonicalFile(), subdir), 0);
-					}
-				}
-			} catch (Exception e) {
-				System.err.println("Failed to perform search at '" + path + "': " + e);
-				e.printStackTrace();
-			}
-		}*/
-		ensureCatalogHasDatabaseDir(new File("c:\\neo"));
-//		for (File dir : dbDirs) {
-//			ensureCatalogHasDatabaseDir(dir);
-//		}
-	}
-	
-	private void ensureCatalogHasDatabaseDir(File dir) {
-		ICatalog catalog = CatalogPlugin.getDefault().getLocalCatalog();
-		try {
-			URL url = new File(dir, "neostore.id").toURI().toURL();
-			System.out.println("Searching for service for " + url);
-			if (catalog.find(url, null).isEmpty()) {
-				IServiceFactory serviceFactory = CatalogPlugin.getDefault().getServiceFactory();
-				for (IService service : serviceFactory.createService(url)) {
-					System.out.println("Found service: " + service);
-					catalog.add(service);
-				}
-			}
-		} catch (MalformedURLException e) {
-			System.err.println("Failed to find service for " + dir);
-			e.printStackTrace();
-		}
-	}
+private void ensureDefaultDatabasesLoaded() {
+HashSet<File> dbDirs = new HashSet<File>();
+for (String path : new String[] { ".", System.getenv("HOME") }) {
+try {
+File dir = new File(path);
+if (dir.exists() && dir.isDirectory()) {
+for (String subdir : new String[] { "dev/neo4j", "neo4j", "workspace" }) {
+findDbDirs(dbDirs, new File(dir.getCanonicalFile(), subdir), 0);
+}
+}
+} catch (Exception e) {
+System.err.println("Failed to perform search at '" + path + "': " + e);
+e.printStackTrace();
+}
+}
+for (File dir : dbDirs) {
+ensureCatalogHasDatabaseDir(dir);
+}
+}
+
+private void ensureCatalogHasDatabaseDir(File dir) {
+ICatalog catalog = CatalogPlugin.getDefault().getLocalCatalog();
+try {
+URL url = new File(dir, "neostore.id").toURI().toURL();
+System.out.println("Searching for service for " + url);
+if (catalog.find(url, null).isEmpty()) {
+IServiceFactory serviceFactory = CatalogPlugin.getDefault().getServiceFactory();
+for (IService service : serviceFactory.createService(url)) {
+System.out.println("Found service: " + service);
+catalog.add(service);
+}
+}
+} catch (MalformedURLException e) {
+System.err.println("Failed to find service for " + dir);
+e.printStackTrace();
+}
+}
     
     private void findDbDirs(HashSet<File> dbDirs, File dir, int depth) {
-    	if(depth > 6) return;
-    	String[] files = dir.list();
-    	if(files == null  || files.length > 50) return;
-       	for(String file:files){
-    		if(file.startsWith("neostore")){
-    			System.out.println("Found Neo4j Database at: "+dir);
-    			dbDirs.add(dir);
-    			return;
-    		}
-    	}
-       	for(String file:files){
-       		File f;
+     if(depth > 6) return;
+     String[] files = dir.list();
+     if(files == null || files.length > 50) return;
+        for(String file:files){
+     if(file.startsWith("neostore")){
+     System.out.println("Found Neo4j Database at: "+dir);
+     dbDirs.add(dir);
+     return;
+     }
+     }
+        for(String file:files){
+        File f;
             try {
-	            f = new File(dir.getCanonicalFile(),file);
-	       		if(f.isDirectory()) {
-	       			findDbDirs(dbDirs,f,depth+1);
-	       		}
+f = new File(dir.getCanonicalFile(),file);
+if(f.isDirectory()) {
+findDbDirs(dbDirs,f,depth+1);
+}
             } catch (IOException e) {
             }
-    	}
-   	}
+     }
+    }
 
 }
