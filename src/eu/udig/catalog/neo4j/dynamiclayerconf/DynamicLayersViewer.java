@@ -59,7 +59,10 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	public void create() {
 		super.create();
 		setTitle("Dynamic Layers Configuration");
-		setMessage("You can add/edit/remove Dynamic Layers");
+		Layer mainLayer;
+		if (isConfigLayer) mainLayer = ((LayerConfig)targetLayer).getParent();
+		else mainLayer = targetLayer;
+		setMessage("You can add/edit/remove Dynamic Layers of the layer:\n"+ mainLayer.getName());
 		validate();
 	}
 
@@ -71,11 +74,19 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		gridLayout.marginWidth = 15;
 		gridLayout.marginHeight = 10;
 		area.setLayout(gridLayout);
+		
+		Composite listArea =new Composite(area, SWT.NULL);
+		GridLayout gridLayout2 = new GridLayout(1, false);
+		listArea.setLayout(gridLayout2);
+		
+		Label label = new Label(listArea, SWT.NULL);
+		label.setText("Dynamic Layers list:");
+		
 		// Now we create the list widget
-		list = new List(area, SWT.BORDER | SWT.MULTI);
-		// We define a minimum width for the list
+		list = new List(listArea, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL);
 		final GridData gridData = new GridData();
 		gridData.widthHint = 200;
+		gridData.heightHint = 150;
 		list.setLayoutData(gridData);
 		// We add a SelectionListener
 		list.addSelectionListener(new SelectionAdapter() {
@@ -103,24 +114,6 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		fillLayout.marginWidth = 15;
 		composite.setLayout(fillLayout);
 
-		// Create Add OSM tags filter button
-		addButtonOSM = new Button(composite, SWT.PUSH);
-		addButtonOSM.setText("Add OSM tags filter");
-
-		addButtonOSM.setEnabled(true);
-		// Add a SelectionListener
-		addButtonOSM.addSelectionListener(new SelectionAdapter() {
-			public void widgetSelected(SelectionEvent e) {
-				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(
-						getShell(), false);
-				if (textEditorDialog.open() == Window.OK) {
-					addOSMLayerConfig(textEditorDialog);
-					// Now re-validate the list because it has changed
-					validate();
-				}
-			}
-		});
-
 		// Create Add CQL button
 		addButtonCQL = new Button(composite, SWT.PUSH);
 		addButtonCQL.setText("Add CQL");
@@ -128,8 +121,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		// Add a SelectionListener
 		addButtonCQL.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
-				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(
-						getShell(), true);
+				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(getShell(), true);
 				if (textEditorDialog.open() == Window.OK) {
 					addCQLLayerConfig(textEditorDialog);
 					// Now re-validate the list because it has changed
@@ -137,7 +129,30 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 				}
 			}
 		});
+		
+		// Create Add OSM tags filter button
+		addButtonOSM = new Button(composite, SWT.PUSH);
+		addButtonOSM.setText("Add OSM tags filter");
 
+		addButtonOSM.setEnabled(false);
+		// Add a SelectionListener
+		addButtonOSM.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				LayerConfigEditingDialog textEditorDialog = new LayerConfigEditingDialog(getShell(),false);
+				if (textEditorDialog.open() == Window.OK) {
+					addOSMLayerConfig(textEditorDialog);
+					// Now re-validate the list because it has changed
+					validate();
+				}
+			}
+		});
+		//the "add osm tags filter" button have to be enable only if the layer is an OSMLayer
+		if (isConfigLayer) {
+			if (((LayerConfig)targetLayer).getParent() instanceof OSMLayer)
+				addButtonOSM.setEnabled(true);
+		} else if (isOSMLayer)
+			addButtonOSM.setEnabled(true);
+		
 		// Create Delete button
 		editButton = new Button(composite, SWT.PUSH);
 		editButton.setText("Edit");
@@ -146,10 +161,15 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		editButton.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
 				// Get the indice of the selected entries
-				String selectedItems = list.getSelection()[0];
-
-				// // Now re-validate the list because it has changed
-				// validate();
+				String selectedItem = list.getSelection()[0];
+				LayerConfigEditingDialog textEditorDialog = createLayerConfigEditingDialog(selectedItem);
+				if (textEditorDialog.open() == Window.OK) {
+					LayerConfig conf = getLayerConfig().get(selectedItem);
+					if ( addCQLLayerConfig(textEditorDialog))
+						removeLayerConfig(conf);
+					// Now re-validate the list because it has changed
+					validate();
+				}
 			}
 		});
 
@@ -166,8 +186,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 				if (MessageDialog.openConfirm(getShell(), "Remove item",
 				"Do you really want to remove selected item(s)?")) {
 					for (int i = 0; i < selectedItems.length; i++) {
-						LayerConfig layerToBeRemove = getLayerConfig().get(
-								selectedItems[i]);
+						LayerConfig layerToBeRemove = getLayerConfig().get(selectedItems[i]);
 						removeLayerConfig(layerToBeRemove);
 					}
 					// Now re-validate the list because it has changed
@@ -214,11 +233,9 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 		LayerConfig newLayerConfig = null;
 		if (isConfigLayer) {
 			newLayerConfig = ((OSMLayer) (((LayerConfig) targetLayer)
-					.getParent())).addSimpleDynamicLayer(dialog.getType(),
-							dialog.getQuery());
+					.getParent())).addSimpleDynamicLayer(dialog.getName(), dialog.getType(),	dialog.getQuery());
 		} else {
-			newLayerConfig = ((OSMLayer) targetLayer).addSimpleDynamicLayer(
-					dialog.getType(), dialog.getQuery());
+			newLayerConfig = ((OSMLayer) targetLayer).addSimpleDynamicLayer(dialog.getName(),	dialog.getType(), dialog.getQuery());
 		}
 
 		if (newLayerConfig != null) {
@@ -227,8 +244,9 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 	}
 
 	// add a CQL-based LayerConfig to a Dynamic Layer
-	private void addCQLLayerConfig(LayerConfigEditingDialog dialog) {
+	private boolean addCQLLayerConfig(LayerConfigEditingDialog dialog) {
 		LayerConfig newLayerConfig = null;
+		try{
 		if (isConfigLayer) {
 			newLayerConfig = ((DynamicLayer) (((LayerConfig) targetLayer)
 					.getParent())).addLayerConfig(dialog.getName(),
@@ -237,10 +255,39 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 			newLayerConfig = ((DynamicLayer) targetLayer).addLayerConfig(
 					dialog.getName(), dialog.getType(), dialog.getQuery());
 		}
-
-		if (newLayerConfig != null) {
-			list.add(newLayerConfig.getName());
 		}
+		catch (Exception e) {
+			MessageDialog.openError(getShell(), "New Dynamic Layer", e.getMessage());
+			return false;
+		}
+		
+		if (newLayerConfig != null) {
+			//check the non-existence of the new layer
+			String[]items = list.getItems();
+			for (int i=0; i<items.length; i++) {
+				if (newLayerConfig.getName().equals(items[i])) {
+					MessageDialog.openError(getShell(), "New Dynamic Layer", "Problem encountered adding the new dynamic layer:\nthe layer "+ newLayerConfig.getName() +" already exists!");
+					return false;
+				}
+			}
+			list.add(newLayerConfig.getName());
+			MessageDialog.openInformation(getShell(), "New Dynamic Layer", "The new dynamic layer "+newLayerConfig.getName()+" was created");
+			return true;
+		}
+		else {
+			MessageDialog.openError(getShell(), "New Dynamic Layer", "Problem encountered adding the new dynamic layer: choose a different name.");
+			return false;
+		}
+	}
+
+	private LayerConfigEditingDialog createLayerConfigEditingDialog(String layerConfigToBeEditName) {
+		LayerConfigEditingDialog textEditorDialog;
+		LayerConfig layerConfigToBeEdit = getLayerConfig().get(layerConfigToBeEditName);
+
+		textEditorDialog = new LayerConfigEditingDialog(getShell(), true, layerConfigToBeEdit.getName(), 
+				layerConfigToBeEdit.getGeometryType(), layerConfigToBeEdit.getQuery());
+
+		return textEditorDialog;
 	}
 
 	// to get the LayerConfigs of the targetLayer
@@ -275,7 +322,7 @@ public class DynamicLayersViewer extends TitleAreaDialog {
 
 		if (!selected)
 			// If nothing was selected, we set an error message
-			setErrorMessage("Select a Dynamic Layer or add a new one");
+			setErrorMessage("Select a Dynamic Layer from the list below or add a new one");
 		else
 			// Otherwise we set the error message to null
 			// to show the intial content of the message area

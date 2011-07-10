@@ -22,19 +22,19 @@ class LayerConfigEditingDialog extends TitleAreaDialog {
 	Text nameText;
 	Combo typeCombo;
 
-	boolean nameEditable;
+	boolean cql;
 	
 	String name = "";
 	String query= "";
 	int type = 0;
 
-	public LayerConfigEditingDialog(Shell parentShell, boolean nameEditable) {
+	public LayerConfigEditingDialog(Shell parentShell, boolean cql) {
 		super(parentShell);
-		this.nameEditable = nameEditable;
+		this.cql = cql;
 	} 
 
-	public LayerConfigEditingDialog(Shell parentShell, boolean nameEditable, String name, int type, String query) {
-		this(parentShell, nameEditable);
+	public LayerConfigEditingDialog(Shell parentShell, boolean cql, String name, int type, String query) {
+		this(parentShell, cql);
 		this.name = name;
 		this.type = type;
 		this.query = query;
@@ -43,7 +43,8 @@ class LayerConfigEditingDialog extends TitleAreaDialog {
 	public void create() {
 		super.create();
 		setTitle("Add/Edit Dynamic Layer");
-		setMessage("bbbbbbbbbbbbbbbbbbbb");
+		if (cql) setMessage("Write the CQL query to add as new dynamic layer");
+		else setMessage("Write the tags filter expression: comma-separeted key=value pairs \nFor example: key1=value1 , key2=value2");
 	}
 
 	protected Control createDialogArea(Composite parent) {
@@ -60,7 +61,6 @@ class LayerConfigEditingDialog extends TitleAreaDialog {
 		gridData.heightHint = 20;
 		nameText.setLayoutData(gridData);
 		nameText.setText(name);
-		nameText.setEditable(nameEditable); 
 
 		Label labelType = new Label(area, SWT.NULL);
 		labelType.setText("Geometry type: ");
@@ -70,7 +70,8 @@ class LayerConfigEditingDialog extends TitleAreaDialog {
 		typeCombo.select(type);
 
 		Label labelEditor = new Label(area, SWT.NULL);
-		labelEditor.setText("CQL Query: ");
+		if (cql)	labelEditor.setText("CQL Query: ");
+		else labelEditor.setText("Tags Filter: ");
 
 		queryText = new Text(area, SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL);
 		queryText.setLayoutData(gridData);
